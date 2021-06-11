@@ -27,12 +27,9 @@ npm install -g aws-cdk
 
 # Install the fluxctl
 cd /tmp
-wget -O fluxctl https://github.com/fluxcd/flux/releases/download/1.21.2/fluxctl_linux_amd64
+wget -O fluxctl https://github.com/fluxcd/flux/releases/download/1.22.2/fluxctl_linux_amd64
 chmod +x fluxctl
 mv fluxctl /usr/local/bin
 
 # Install Helm
-cd /tmp
-wget -O helm.tgz https://get.helm.sh/helm-v3.5.3-linux-amd64.tar.gz
-chmod +x linux-amd64/helm
-mv linux-amd64/helm /usr/local/bin 
+curl https://raw.githubusercontent.com/helm/helm/master/scripts/get-helm-3 | bash
