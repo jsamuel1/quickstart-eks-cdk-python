@@ -1,4 +1,4 @@
   
 { 
-    "app": "python eks_codebuild.py"
+    "app": "python3 eks_codebuild.py"
 }

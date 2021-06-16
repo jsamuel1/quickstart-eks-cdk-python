@@ -7,11 +7,11 @@ Run our CodeBuild Project once when the Stack is first provisioned
 from aws_cdk import (
     aws_iam as iam,
     custom_resources as custom_resources,
-    core,
 )
 import os
+from constructs import Construct
 
-class CodeBuildObjectResource(core.Construct):
+class CodeBuildObjectResource(Construct):
     """S3 Object constructs that uses AWSCustomResource internally
     Arguments:
         :param codebuild_name -- The CodeBuild Project we want to run
@@ -19,7 +19,7 @@ class CodeBuildObjectResource(core.Construct):
                               Default: logs.RetentionDays.INFINITE
     """
 
-    def __init__(self, scope: core.Construct, id: str, codebuild_name: str, codebuild_arn: str, log_retention=None) -> None:
+    def __init__(self, scope: Construct, id: str, codebuild_name: str, codebuild_arn: str, log_retention=None) -> None:
         super().__init__(scope, id)
         
         on_create = self.get_on_create_update(codebuild_name=codebuild_name)

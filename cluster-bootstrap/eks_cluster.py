@@ -10,24 +10,30 @@ NOTE: This pulls many parameters/options for what you'd like from the cdk.json c
 Have a look there for many options you can chance to customise this template for your environments/needs.
 """
 
+from constructs import Construct
+
 from aws_cdk import (
+    Stack, 
+    RemovalPolicy, 
+    CfnOutput, 
+    Environment, 
+    App,
     aws_ec2 as ec2,
     aws_eks as eks,
     aws_iam as iam,
     aws_elasticsearch as es,
     aws_logs as logs,
-    aws_certificatemanager as cm,  
-    core
+    aws_certificatemanager as cm
 )
 import os
 
 # Import the custom resource to switch on control plane logging from ekslogs_custom_resource.py
 from ekslogs_custom_resource import EKSLogsObjectResource
 
-class EKSClusterStack(core.Stack):
+class EKSClusterStack(Stack):
 
-    def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:
-        super().__init__(scope, id, **kwargs)
+    def __init__(self, scope: Construct, construct_id: str, **kwargs) -> None:
+        super().__init__(scope, construct_id, **kwargs)
 
         # Either create a new IAM role to administrate the cluster or create a new one
         if (self.node.try_get_context("create_new_cluster_admin_role") == "True"):
@@ -318,20 +324,20 @@ class EKSClusterStack(core.Stack):
             }
             
             # Attach the necessary permissions
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_1))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_2))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_3))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_4))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_5))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_6))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_7))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_8))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_9))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_10))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_11))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_12))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_13))
-            alb_service_account.add_to_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_14))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_1))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_2))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_3))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_4))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_5))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_6))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_7))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_8))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_9))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_10))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_11))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_12))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_13))
+            alb_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(alb_policy_statement_json_14))
 
             # Deploy the AWS Load Balancer Controller from the AWS Helm Chart
             # For more info check out https://github.com/aws/eks-charts/tree/master/stable/aws-load-balancer-controller
@@ -387,8 +393,8 @@ class EKSClusterStack(core.Stack):
             }
 
             # Attach the necessary permissions
-            externaldns_service_account.add_to_policy(iam.PolicyStatement.from_json(externaldns_policy_statement_json_1))
-            externaldns_service_account.add_to_policy(iam.PolicyStatement.from_json(externaldns_policy_statement_json_2))
+            externaldns_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(externaldns_policy_statement_json_1))
+            externaldns_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(externaldns_policy_statement_json_2))
 
             # Deploy External DNS from the bitnami Helm chart
             # For more info see https://github.com/bitnami/charts/tree/master/bitnami/external-dns
@@ -448,7 +454,7 @@ class EKSClusterStack(core.Stack):
             }
 
             # Attach the necessary permissions
-            awsebscsidriver_service_account.add_to_policy(iam.PolicyStatement.from_json(awsebscsidriver_policy_statement_json_1))
+            awsebscsidriver_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(awsebscsidriver_policy_statement_json_1))
 
             # Install the AWS EBS CSI Driver
             # For more info see https://github.com/kubernetes-sigs/aws-ebs-csi-driver
@@ -519,9 +525,9 @@ class EKSClusterStack(core.Stack):
             }
 
             # Attach the necessary permissions
-            awsefscsidriver_service_account.add_to_policy(iam.PolicyStatement.from_json(awsefscsidriver_policy_statement_json_1))
-            awsefscsidriver_service_account.add_to_policy(iam.PolicyStatement.from_json(awsefscsidriver_policy_statement_json_2))
-            awsefscsidriver_service_account.add_to_policy(iam.PolicyStatement.from_json(awsefscsidriver_policy_statement_json_3))
+            awsefscsidriver_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(awsefscsidriver_policy_statement_json_1))
+            awsefscsidriver_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(awsefscsidriver_policy_statement_json_2))
+            awsefscsidriver_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(awsefscsidriver_policy_statement_json_3))
 
             # Install the AWS EFS CSI Driver
             # For more info see https://github.com/kubernetes-sigs/aws-efs-csi-driver
@@ -566,7 +572,7 @@ class EKSClusterStack(core.Stack):
             }
 
             # Attach the necessary permissions
-            clusterautoscaler_service_account.add_to_policy(iam.PolicyStatement.from_json(clusterautoscaler_policy_statement_json_1))
+            clusterautoscaler_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(clusterautoscaler_policy_statement_json_1))
 
             # Install the Cluster Autoscaler
             # For more info see https://github.com/kubernetes/autoscaler
@@ -643,7 +649,7 @@ class EKSClusterStack(core.Stack):
             # and defaults to one node in a single availability zone
             es_domain = es.Domain(
                 self, "ESDomain",
-                removal_policy=core.RemovalPolicy.DESTROY,
+                removal_policy=RemovalPolicy.DESTROY,
                 version=es.ElasticsearchVersion.V7_9,
                 vpc=eks_vpc,
                 vpc_subnets=[ec2.SubnetSelection(subnets=[eks_vpc.private_subnets[0]])],
@@ -671,7 +677,7 @@ class EKSClusterStack(core.Stack):
             }
 
             # Add the policies to the service account
-            fluentbit_service_account.add_to_policy(iam.PolicyStatement.from_json(fluentbit_policy_statement_json_1))
+            fluentbit_service_account.add_to_principal_policy(iam.PolicyStatement.from_json(fluentbit_policy_statement_json_1))
             es_domain.grant_write(fluentbit_service_account)
 
             # For more info check out https://github.com/fluent/helm-charts/tree/main/charts/fluent-bit
@@ -691,7 +697,7 @@ class EKSClusterStack(core.Stack):
             fluentbit_chart.node.add_dependency(fluentbit_service_account)
 
             # Output the Kibana address in our CloudFormation Stack
-            core.CfnOutput(
+            CfnOutput(
                 self, "KibanaAddress",
                 value="https://" + es_domain.domain_endpoint + "/_plugin/kibana/",
                 description="Private endpoint for this EKS environment's Kibana to consume the logs",
@@ -1359,7 +1365,7 @@ class EKSClusterStack(core.Stack):
                 }
             )
 
-app = core.App()
+app = App()
 if app.node.try_get_context("account").strip() != "":
     account = app.node.try_get_context("account")
 else:
@@ -1371,5 +1377,5 @@ else:
     region = os.environ.get("CDK_DEPLOY_REGION", os.environ["CDK_DEFAULT_REGION"])
 # Note that if we didn't pass through the ACCOUNT and REGION from these environment variables that
 # it won't let us create 3 AZs and will only create a max of 2 - even when we ask for 3 in eks_vpc
-eks_cluster_stack = EKSClusterStack(app, "EKSClusterStack", env=core.Environment(account=account, region=region))
+eks_cluster_stack = EKSClusterStack(app, "EKSClusterStack", env=Environment(account=account, region=region))
 app.synth()

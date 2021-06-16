@@ -1,4 +1,7 @@
 .vscode
+.venv/
+venv/
+
 cdk.out
 cdk.context.json
 node_modules

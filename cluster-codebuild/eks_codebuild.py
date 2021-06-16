@@ -11,14 +11,15 @@ aws codebuild import-source-credentials --server-type GITHUB --auth-type PERSONA
 from aws_cdk import (
     aws_iam as iam,
     aws_codebuild as codebuild,
-    core,
+    App, Stack
 )
 import os
+from constructs import Construct
 
 from codebuild_custom_resource import CodeBuildObjectResource
 
 # The owner of the GitHub repo to pull from and set up a GitOps webhook against
-github_owner = "aws-quickstart"
+github_owner = "jsamuel1"
 
 # The GitHub repo to pull from and set up a GitOps webhook against
 github_repo="quickstart-eks-cdk-python"
@@ -26,9 +27,9 @@ github_repo="quickstart-eks-cdk-python"
 # The GitHub branch to pull from and set up a GitOps webhook against
 github_branch = "main"
 
-class EKSCodeBuildStack(core.Stack):
+class EKSCodeBuildStack(Stack):
 
-    def __init__(self, scope: core.Construct, id: str, **kwargs) -> None:
+    def __init__(self, scope: Construct, id: str, **kwargs) -> None:
         super().__init__(scope, id, **kwargs)
 
         # Create IAM Role For CodeBuild
@@ -76,6 +77,6 @@ class EKSCodeBuildStack(core.Stack):
         """
 
 
-app = core.App()
+app = App()
 eks_codebuild_stack = EKSCodeBuildStack(app, "EKSCodeBuildStack")
 app.synth()
