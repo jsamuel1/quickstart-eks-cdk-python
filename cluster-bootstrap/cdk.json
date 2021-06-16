@@ -2,7 +2,6 @@
 { 
     "app": "python3 eks_cluster.py",
     "context": {
-        "account": "877848422048",
         "region": "ap-southeast-2",
         "cluster_name": "eks_banchee",
         "create_new_cluster_admin_role": "True",
