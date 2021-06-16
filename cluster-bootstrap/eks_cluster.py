@@ -91,6 +91,7 @@ class EKSClusterStack(Stack):
             self, "cluster",
             vpc=eks_vpc,
             masters_role=cluster_admin_role,
+            cluster_name=self.node.try_get_context("cluster_name"),
             # Make our cluster's control plane accessible only within our private VPC
             # This means that we'll have to ssh to a jumpbox/bastion or set up a VPN to manage it
             endpoint_access=eks.EndpointAccess.PRIVATE,
