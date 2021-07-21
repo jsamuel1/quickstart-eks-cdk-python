@@ -8,7 +8,7 @@
         "create_new_cluster_admin_role": "True",
         "create_new_vpc": "False",
         "existing_vpc_name": "aws-controltower-VPC",
-        "eks_version": "1.2`",
+        "eks_version": "1.21",
         "eks_node_quantity": 3,
         "eks_node_disk_size": 20,
         "eks_node_instance_type": "m5.large",
