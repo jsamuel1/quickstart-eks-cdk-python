@@ -1241,4 +1241,4 @@ class EKSClusterStack(Stack):
             eks_arn=eks_cluster.cluster_arn
         )
 
-        EKSChartsStack(self, "EKSCharts", eks_cluster) 
+        EKSChartsStack(self, "EKSCharts", eks_cluster=eks_cluster) 
