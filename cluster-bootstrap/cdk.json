@@ -1,6 +1,6 @@
   
 { 
-    "app": "python3 eks_cluster.py",
+    "app": "python3 cdkapp.py",
     "context": {
         "account": "",
         "region": "ap-southeast-2",
