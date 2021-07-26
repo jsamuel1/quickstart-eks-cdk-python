@@ -30,7 +30,7 @@ import os
 # Import the custom resource to switch on control plane logging from ekslogs_custom_resource.py
 from ekslogs_custom_resource import EKSLogsObjectResource
 from bastion import BastionStack
-from clientvpn import ClientVPNStack
+from clientvpn import ClientVpnStack
 from eks_charts import EKSChartsStack
 
 class EKSClusterStack(Stack):
@@ -1206,7 +1206,7 @@ class EKSClusterStack(Stack):
             # Add a rule to allow our new SG to talk to the EKS control plane
             eks_cluster.cluster_security_group.add_ingress_rule(
                 bastion_stack.bastion_security_group,
-                ec2.Port.all_traffic()
+                ec2.Port.all_traffic())
                 
             # Wait to deploy Bastion until cluster is up and we're deploying manifests/charts to it
             # This could be any of the charts/manifests I just picked this one at random
@@ -1241,20 +1241,4 @@ class EKSClusterStack(Stack):
             eks_arn=eks_cluster.cluster_arn
         )
 
-        EKSChartsStack(self, "EKSCharts", eks_cluster)
-        
-
-app = App()
-if app.node.try_get_context("account").strip() != "":
-    account = app.node.try_get_context("account")
-else:
-    account = os.environ.get("CDK_DEPLOY_ACCOUNT", os.environ["CDK_DEFAULT_ACCOUNT"])
-
-if app.node.try_get_context("region").strip() != "":
-    region = app.node.try_get_context("region")
-else:
-    region = os.environ.get("CDK_DEPLOY_REGION", os.environ["CDK_DEFAULT_REGION"])
-# Note that if we didn't pass through the ACCOUNT and REGION from these environment variables that
-# it won't let us create 3 AZs and will only create a max of 2 - even when we ask for 3 in eks_vpc
-eks_cluster_stack = EKSClusterStack(app, "EKSClusterStack", env=Environment(account=account, region=region))
-app.synth()
+        EKSChartsStack(self, "EKSCharts", eks_cluster) 
