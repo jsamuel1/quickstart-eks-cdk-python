@@ -29,6 +29,9 @@ import os
 
 # Import the custom resource to switch on control plane logging from ekslogs_custom_resource.py
 from ekslogs_custom_resource import EKSLogsObjectResource
+from bastion import BastionStack
+from clientvpn import ClientVPNStack
+from eks_charts import EKSChartsStack
 
 class EKSClusterStack(Stack):
 
@@ -1198,134 +1201,37 @@ class EKSClusterStack(Stack):
         # If you have a 'True' in the deploy_bastion variable at the top of the file we'll deploy
         # a basion server that you can connect to via Systems Manager Session Manager
         if (self.node.try_get_context("deploy_bastion") == "True"):
-            # Create an Instance Profile for our Admin Role to assume w/EC2
-            cluster_admin_role_instance_profile = iam.CfnInstanceProfile(
-                self, "ClusterAdminRoleInstanceProfile",
-                roles=[cluster_admin_role.role_name]
-            )
-
-            # Another way into our Bastion is via Systems Manager Session Manager
-            if (self.node.try_get_context("create_new_cluster_admin_role") == "True"):
-                cluster_admin_role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"))
-
-            # Create Bastion
-            # Get Latest Amazon Linux AMI
-            amzn_linux = ec2.MachineImage.latest_amazon_linux(
-                generation=ec2.AmazonLinuxGeneration.AMAZON_LINUX_2,
-                edition=ec2.AmazonLinuxEdition.STANDARD,
-                virtualization=ec2.AmazonLinuxVirt.HVM,
-                storage=ec2.AmazonLinuxStorage.GENERAL_PURPOSE
-                )
-
-            # Create SecurityGroup for bastion
-            bastion_security_group = ec2.SecurityGroup(
-                self, "BastionSecurityGroup",
-                vpc=eks_vpc,
-                allow_all_outbound=True
-            )
+            bastion_stack = BastionStack(self, "bastion", cluster_admin_role=cluster_admin_role, eks_vpc=eks_vpc, cluster_name=eks_cluster.cluster_name)
 
             # Add a rule to allow our new SG to talk to the EKS control plane
             eks_cluster.cluster_security_group.add_ingress_rule(
-                bastion_security_group,
+                bastion_stack.bastion_security_group,
                 ec2.Port.all_traffic()
-            )
-
-            # Create our EC2 instance for bastion
-            bastion_instance = ec2.Instance(
-                self, "BastionInstance",
-                instance_type=ec2.InstanceType(self.node.try_get_context("basiton_node_type")),
-                machine_image=amzn_linux,
-                role=cluster_admin_role,
-                vpc=eks_vpc,
-                vpc_subnets=ec2.SubnetSelection(subnet_type=ec2.SubnetType.PUBLIC),
-                security_group=bastion_security_group,
-                block_devices=[ec2.BlockDevice(device_name="/dev/xvda", volume=ec2.BlockDeviceVolume.ebs(self.node.try_get_context("basiton_disk_size")))]
-            )
-
-            # Set up our kubectl and fluxctl
-            bastion_instance.user_data.add_commands("curl -o kubectl https://amazon-eks.s3.us-west-2.amazonaws.com/1.20.4/2021-04-12/bin/linux/amd64/kubectl")
-            bastion_instance.user_data.add_commands("chmod +x ./kubectl")
-            bastion_instance.user_data.add_commands("mv ./kubectl /usr/bin")
-            bastion_instance.user_data.add_commands("aws eks update-kubeconfig --name " + eks_cluster.cluster_name + " --region " + self.region)
-            bastion_instance.user_data.add_commands("curl -o fluxctl https://github.com/fluxcd/flux/releases/download/1.22.1/fluxctl_linux_amd64")
-            bastion_instance.user_data.add_commands("chmod +x ./fluxctl")
-            bastion_instance.user_data.add_commands("mv ./fluxctl /usr/bin")
-
+                
             # Wait to deploy Bastion until cluster is up and we're deploying manifests/charts to it
             # This could be any of the charts/manifests I just picked this one at random
-            bastion_instance.node.add_dependency(ssm_agent_manifest)
+            bastion_stack.node.add_dependency(ssm_agent_manifest)
+
 
 
         if (self.node.try_get_context("deploy_client_vpn") == "True"):
             # Create and upload your client and server certs as per https://docs.aws.amazon.com/vpn/latest/clientvpn-admin/client-authentication.html#mutual
-            # And then put the ARNs for them into the items below
-            client_cert = cm.Certificate.from_certificate_arn(
-                self, "ClientCert",
-                certificate_arn=self.node.try_get_context("vpn_client_certificate_arn"))
-            server_cert = cm.Certificate.from_certificate_arn(
-                self, "ServerCert",
-                certificate_arn=self.node.try_get_context("vpn_server_certificate_arn"))
-
-            # Create SecurityGroup for VPN
-            vpn_security_group = ec2.SecurityGroup(
-                self, "VPNSecurityGroup",
-                vpc=eks_vpc,
-                allow_all_outbound=True
-            )
+            
+            client_vpn = ClientVpnStack(self, "clientvpn", eks_vpc=eks_vpc )
+            
             # Add a rule to allow our new SG to talk to the EKS control plane
             eks_cluster.cluster_security_group.add_ingress_rule(
-                vpn_security_group,
+                client_vpn.vpn_security_group,
                 ec2.Port.all_traffic()
             )
 
             if (self.node.try_get_context("deploy_managed_elasticsearch") == "True"):
                 # Add a rule to allow our new SG to talk to Elastic
                 elastic_security_group.add_ingress_rule(
-                    vpn_security_group,
+                    client_vpn.vpn_security_group,
                     ec2.Port.all_traffic()
                 )
 
-            # Create CloudWatch Log Group and Stream and keep the logs for 1 month
-            log_group = logs.LogGroup(
-                self, "VPNLogGroup",
-                retention=logs.RetentionDays.ONE_MONTH
-            )
-            log_stream = log_group.add_stream("VPNLogStream")
-
-            endpoint = ec2.CfnClientVpnEndpoint(
-                self, "VPNEndpoint",
-                description="EKS Client VPN",
-                authentication_options=[{
-                    "type": "certificate-authentication",
-                    "mutualAuthentication": {
-                        "clientRootCertificateChainArn": client_cert.certificate_arn
-                    }
-                }],
-                client_cidr_block=self.node.try_get_context("vpn_client_cidr_block"),
-                server_certificate_arn=server_cert.certificate_arn,
-                connection_log_options={
-                    "enabled": True,
-                    "cloudwatchLogGroup": log_group.log_group_name,
-                    "cloudwatchLogStream": log_stream.log_stream_name
-                },
-                split_tunnel=True,
-                security_group_ids=[vpn_security_group.security_group_id],
-                vpc_id=eks_vpc.vpc_id
-            )
-
-            ec2.CfnClientVpnAuthorizationRule(
-                self, "ClientVpnAuthRule",
-                client_vpn_endpoint_id=endpoint.ref,
-                target_network_cidr=eks_vpc.vpc_cidr_block,
-                authorize_all_groups=True,
-                description="Authorize the Client VPN access to our VPC CIDR"
-            )
-
-            ec2.CfnClientVpnTargetNetworkAssociation(
-                self, "ClientVpnNetworkAssociation",
-                client_vpn_endpoint_id=endpoint.ref,
-                subnet_id=eks_vpc.private_subnets[0].subnet_id
-            )
 
         # Enable control plane logging which requires a Custom Resource until it has proper
         # CloudFormation support that CDK can leverage
@@ -1335,36 +1241,8 @@ class EKSClusterStack(Stack):
             eks_arn=eks_cluster.cluster_arn
         )
 
-        # Install the OPA Gatekeeper
-        if (self.node.try_get_context("deploy_opa_gatekeeper") == "True"):
-            # For more info see https://github.com/open-policy-agent/gatekeeper
-            gatekeeper_chart = eks_cluster.add_helm_chart(
-                "gatekeeper",
-                chart="gatekeeper",
-                version="3.4.0",
-                release="gatekeeper",
-                repository="https://open-policy-agent.github.io/gatekeeper/charts",
-                namespace="kube-system"
-            )
-
-        if (self.node.try_get_context("deploy_gatekeeper_policies") == "True"):
-            # For more info see https://github.com/aws-quickstart/quickstart-eks-cdk-python/tree/main/gatekeeper-policies
-            # and https://github.com/fluxcd/flux/tree/master/chart/flux
-            flux_gatekeeper_chart = eks_cluster.add_helm_chart(
-                "flux-gatekeeper",
-                chart="flux",
-                version="1.9.0",
-                release="flux-gatekeeper",
-                repository="https://charts.fluxcd.io",
-                namespace="kube-system",
-                values={
-                    "git": {
-                        "url": self.node.try_get_context("gatekeeper_policies_git_url"),
-                        "branch": self.node.try_get_context("gatekeeper_policies_git_branch"),
-                        "path": self.node.try_get_context("gatekeeper_policies_git_path")
-                    }
-                }
-            )
+        EKSChartsStack(self, "EKSCharts", eks_cluster)
+        
 
 app = App()
 if app.node.try_get_context("account").strip() != "":
