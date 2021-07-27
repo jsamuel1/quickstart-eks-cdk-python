@@ -108,8 +108,8 @@ class EKSClusterStack(Stack):
             disk_size=self.node.try_get_context("eks_node_disk_size"),
             # The default in CDK is to force upgrades through even if they violate - it is safer to not do that
             force_update=False,
-            instance_types=[ec2.InstanceType(self.node.try_get_context("eks_node_instance_type"))],
-            release_version=self.node.try_get_context("eks_node_ami_version")
+            instance_types=[ec2.InstanceType(self.node.try_get_context("eks_node_instance_type"))]
+            # release_version=self.node.try_get_context("eks_node_ami_version")
         )
         eks_node_group.role.add_managed_policy(iam.ManagedPolicy.from_aws_managed_policy_name("AmazonSSMManagedInstanceCore"))
         
