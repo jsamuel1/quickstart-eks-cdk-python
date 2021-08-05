@@ -39,7 +39,7 @@ class EKSClusterStack(Stack):
 
         # Either create a new IAM role to administrate the cluster or create a new one
         if (self.node.try_get_context("create_new_cluster_admin_role") == "True"):
-            cluster_admin_role = iam.Role(self, "ClusterAdminRole",
+            this.cluster_admin_role = iam.Role(self, "ClusterAdminRole",
                 assumed_by=iam.CompositePrincipal(
                     iam.AccountRootPrincipal(),
                     iam.ServicePrincipal("ec2.amazonaws.com")
@@ -55,7 +55,7 @@ class EKSClusterStack(Stack):
             cluster_admin_role.add_to_policy(iam.PolicyStatement.from_json(cluster_admin_policy_statement_json_1))
         else:
             # You'll also need to add a trust relationship to ec2.amazonaws.com to sts:AssumeRole to this as well
-            cluster_admin_role = iam.Role.from_role_arn(self, "ClusterAdminRole",
+            this.cluster_admin_role = iam.Role.from_role_arn(self, "ClusterAdminRole",
                 role_arn=self.node.try_get_context("existing_admin_role_arn")
             )
     
@@ -92,7 +92,7 @@ class EKSClusterStack(Stack):
         eks_cluster = eks.Cluster(
             self, "cluster",
             vpc=eks_vpc,
-            masters_role=cluster_admin_role,
+            masters_role=this.cluster_admin_role,
             cluster_name=self.node.try_get_context("cluster_name"),
             # Make our cluster's control plane accessible only within our private VPC
             # This means that we'll have to ssh to a jumpbox/bastion or set up a VPN to manage it
@@ -641,7 +641,7 @@ class EKSClusterStack(Stack):
         # If you have a 'True' in the deploy_bastion variable at the top of the file we'll deploy
         # a basion server that you can connect to via Systems Manager Session Manager
         if (self.node.try_get_context("deploy_bastion") == "True"):
-            bastion_stack = BastionStack(self, "bastion", cluster_admin_role=cluster_admin_role, eks_vpc=eks_vpc, cluster_name=eks_cluster.cluster_name)
+            bastion_stack = BastionStack(self, "bastion", cluster_admin_role=this.cluster_admin_role, eks_vpc=eks_vpc, cluster_name=eks_cluster.cluster_name)
 
             # Add a rule to allow our new SG to talk to the EKS control plane
             eks_cluster.cluster_security_group.add_ingress_rule(
