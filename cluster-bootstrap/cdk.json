@@ -33,6 +33,7 @@
         "deploy_ssm_agent": "True",
         "deploy_bastion": "True",
         "basiton_node_type": "t3.large",
+        "basiton_disk_size": "20",
         "deploy_client_vpn": "False",
         "deploy_opa_gatekeeper": "False",
         "deploy_gatekeeper_policies": "False",
