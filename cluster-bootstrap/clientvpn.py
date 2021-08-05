@@ -22,7 +22,7 @@ import os
 # Import the custom resource to switch on control plane logging from ekslogs_custom_resource.py
 from ekslogs_custom_resource import EKSLogsObjectResource
 
-class ClientVPNStack(Stack):
+class ClientVpnStack(Stack):
 
     def __init__(self, scope: Construct, construct_id: str, *, eks_vpc, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
