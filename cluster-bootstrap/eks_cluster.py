@@ -641,7 +641,7 @@ class EKSClusterStack(Stack):
         # If you have a 'True' in the deploy_bastion variable at the top of the file we'll deploy
         # a basion server that you can connect to via Systems Manager Session Manager
         if (self.node.try_get_context("deploy_bastion") == "True"):
-            bastion_stack = BastionStack(self, "bastion", cluster_admin_role=self.cluster_admin_role, eks_vpc=eks_vpc, cluster_name=eks_cluster.cluster_name)
+            bastion_stack = BastionStack(self, "bastion", cluster_admin_role_arn=self.cluster_admin_role.arn, eks_vpc=eks_vpc, cluster_name=eks_cluster.cluster_name)
 
             # Add a rule to allow our new SG to talk to the EKS control plane
             eks_cluster.cluster_security_group.add_ingress_rule(
