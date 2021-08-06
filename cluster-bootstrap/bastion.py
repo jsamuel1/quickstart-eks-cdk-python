@@ -27,7 +27,7 @@ class BastionStack(Stack):
     def __init__(self, scope: Construct, construct_id: str, *, cluster_admin_role_arn, eks_vpc, cluster_name, **kwargs) -> None:
         super().__init__(scope, construct_id, **kwargs)
 
-        cluster_admin_role = iam.Role.from_role_arn(cluster_admin_role_arn)
+        cluster_admin_role = iam.Role.from_role_arn("clusterrole",cluster_admin_role_arn)
         # If you have a 'True' in the deploy_bastion variable at the top of the file we'll deploy
         # a basion server that you can connect to via Systems Manager Session Manager
         if (self.node.try_get_context("deploy_bastion") == "True"):
