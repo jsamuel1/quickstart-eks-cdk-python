@@ -475,40 +475,92 @@ class EKSClusterStack(Stack):
                 values={
                     "prometheus": {
                         "prometheusSpec": {
-                        "storageSpec": {
-                            "volumeClaimTemplate": {
-                            "spec": {
-                                "accessModes": [
-                                "ReadWriteOnce"
-                                ],
-                                "resources": {
-                                "requests": {
-                                    "storage": self.node.try_get_context("prometheus_disk_size")
+                            "storageSpec": {
+                                "volumeClaimTemplate": {
+                                    "spec": {
+                                        "accessModes": [
+                                            "ReadWriteOnce"
+                                        ],
+                                        "resources": {
+                                            "requests": {
+                                                "storage": self.node.try_get_context("prometheus_disk_size")
+                                            }
+                                        },
+                                        "storageClassName": "gp2"
+                                    }
                                 }
+                            },
+                            "resources": {
+                                "requests": {
+                                    "memory": "1Gi",
+                                    "cpu": "300m"
                                 },
-                                "storageClassName": "gp2"
-                            }
-                            }
-                        }
+                                "limits": {
+                                    "memory": "2Gi",
+                                    "cpu": "500m"
+                                }
+                            },
+                            # Enhanced retention settings for metrics
+                            "retention": "15d",
+                            # Scrape interval for more frequent metrics collection
+                            "scrapeInterval": "30s",
+                            "evaluationInterval": "30s",
+                            # Enable remote write capability for integration with external systems
+                            "remoteWrite": []
+                        },
+                        # Configure additional service monitors for comprehensive metrics collection
+                        "serviceMonitor": {
+                            "selfMonitor": True
+                        },
+                        # Add additional Prometheus rules for better alerting
+                        "additionalServiceMonitorLabels": {
+                            "release": "prometheus"
                         }
                     },
                     "alertmanager": {
                         "alertmanagerSpec": {
-                        "storage": {
-                            "volumeClaimTemplate": {
-                            "spec": {
-                                "accessModes": [
-                                "ReadWriteOnce"
-                                ],
-                                "resources": {
-                                "requests": {
-                                    "storage": self.node.try_get_context("alertmanager_disk_size")
+                            "storage": {
+                                "volumeClaimTemplate": {
+                                    "spec": {
+                                        "accessModes": [
+                                            "ReadWriteOnce"
+                                        ],
+                                        "resources": {
+                                            "requests": {
+                                                "storage": self.node.try_get_context("alertmanager_disk_size")
+                                            }
+                                        },
+                                        "storageClassName": "gp2"
+                                    }
                                 }
+                            },
+                            "resources": {
+                                "requests": {
+                                    "memory": "200Mi",
+                                    "cpu": "100m"
                                 },
-                                "storageClassName": "gp2"
+                                "limits": {
+                                    "memory": "400Mi",
+                                    "cpu": "200m"
+                                }
                             }
-                            }
-                        }
+                        },
+                        # Enhanced alert configuration with better grouping and routing
+                        "config": {
+                            "global": {
+                                "resolve_timeout": "5m"
+                            },
+                            "route": {
+                                "group_by": ["alertname", "job"],
+                                "group_wait": "30s",
+                                "group_interval": "5m",
+                                "repeat_interval": "12h"
+                            },
+                            "receivers": [
+                                {
+                                    "name": "null"
+                                }
+                            ]
                         }
                     },
                     "grafana": {
@@ -516,6 +568,96 @@ class EKSClusterStack(Stack):
                             "enabled": "true",
                             "storageClassName": "gp2",
                             "size": self.node.try_get_context("grafana_disk_size")
+                        },
+                        # Enhanced Grafana configuration for advanced visualization
+                        "adminPassword": "prom-operator",
+                        "resources": {
+                            "requests": {
+                                "memory": "300Mi",
+                                "cpu": "200m"
+                            },
+                            "limits": {
+                                "memory": "500Mi",
+                                "cpu": "300m"
+                            }
+                        },
+                        # Additional plugins for enhanced visualization capabilities
+                        "plugins": [
+                            "grafana-piechart-panel",
+                            "grafana-worldmap-panel",
+                            "grafana-clock-panel",
+                            "briangann-gauge-panel",
+                            "natel-plotly-panel"
+                        ],
+                        # Configure dashboard provisioning with predefined dashboards
+                        "dashboardProviders": {
+                            "dashboardproviders.yaml": {
+                                "apiVersion": 1,
+                                "providers": [
+                                    {
+                                        "name": "default",
+                                        "orgId": 1,
+                                        "folder": "",
+                                        "type": "file",
+                                        "disableDeletion": False,
+                                        "editable": True,
+                                        "options": {
+                                            "path": "/var/lib/grafana/dashboards/default"
+                                        }
+                                    }
+                                ]
+                            }
+                        },
+                        # Configure additional data sources for enhanced visualization
+                        "additionalDataSources": [
+                            {
+                                "name": "CloudWatch",
+                                "type": "cloudwatch",
+                                "jsonData": {
+                                    "authType": "credentials",
+                                    "defaultRegion": self.region
+                                }
+                            }
+                        ]
+                    },
+                    # Enable node exporter for host-level metrics
+                    "nodeExporter": {
+                        "enabled": True
+                    },
+                    # Add custom Prometheus rules for more comprehensive alerting
+                    "additionalPrometheusRulesMap": {
+                        "custom-rules": {
+                            "groups": [
+                                {
+                                    "name": "resource-usage",
+                                    "rules": [
+                                        {
+                                            "alert": "HighCpuUsage",
+                                            "expr": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[5m])) * 100) > 80",
+                                            "for": "5m",
+                                            "labels": {
+                                                "severity": "warning"
+                                            },
+                                            "annotations": {
+                                                "summary": "High CPU usage detected",
+                                                "description": "CPU usage is above 80% for 5 minutes on {{ $labels.instance }}"
+                                            }
+                                        },
+                                        {
+                                            "alert": "HighMemoryUsage",
+                                            "expr": "(node_memory_MemTotal_bytes - node_memory_MemAvailable_bytes) / node_memory_MemTotal_bytes * 100 > 80",
+                                            "for": "5m",
+                                            "labels": {
+                                                "severity": "warning"
+                                            },
+                                            "annotations": {
+                                                "summary": "High memory usage detected",
+                                                "description": "Memory usage is above 80% for 5 minutes on {{ $labels.instance }}"
+                                            }
+                                        }
+                                    ]
+                                }
+                            ]
                         }
                     }
                 }          
@@ -548,6 +690,76 @@ class EKSClusterStack(Stack):
                     "type": "LoadBalancer"
                 }
             })
+            
+            # Create ConfigMap for custom Grafana dashboards
+            with open("./custom-dashboards/kubernetes-cluster-monitoring.json", "r") as f:
+                cluster_monitoring_dashboard = f.read()
+                
+            custom_dashboards_configmap = eks_cluster.add_manifest("GrafanaCustomDashboardsConfigMap", {
+                "apiVersion": "v1",
+                "kind": "ConfigMap",
+                "metadata": {
+                    "name": "grafana-custom-dashboards",
+                    "namespace": "kube-system"
+                },
+                "data": {
+                    "kubernetes-cluster-monitoring.json": cluster_monitoring_dashboard,
+                    "configure-dashboards.py": open("./custom-dashboards/configure-dashboards.py", "r").read()
+                }
+            })
+            
+            # Create a Kubernetes Job to configure Grafana with custom dashboards
+            grafana_dashboard_job = eks_cluster.add_manifest("GrafanaDashboardConfigurationJob", {
+                "apiVersion": "batch/v1",
+                "kind": "Job",
+                "metadata": {
+                    "name": "grafana-dashboard-configuration",
+                    "namespace": "kube-system"
+                },
+                "spec": {
+                    "backoffLimit": 4,
+                    "template": {
+                        "spec": {
+                            "serviceAccountName": "prometheus-grafana",
+                            "containers": [
+                                {
+                                    "name": "grafana-dashboard-config",
+                                    "image": "python:3.9-slim",
+                                    "command": ["/bin/sh", "-c"],
+                                    "args": [
+                                        "pip install requests && \
+                                        mkdir -p /tmp/dashboards && \
+                                        cp /configmap/kubernetes-cluster-monitoring.json /tmp/dashboards/ && \
+                                        cp /configmap/configure-dashboards.py /tmp/ && \
+                                        chmod +x /tmp/configure-dashboards.py && \
+                                        cd /tmp && \
+                                        python3 ./configure-dashboards.py"
+                                    ],
+                                    "volumeMounts": [
+                                        {
+                                            "name": "custom-dashboards-volume",
+                                            "mountPath": "/configmap"
+                                        }
+                                    ]
+                                }
+                            ],
+                            "volumes": [
+                                {
+                                    "name": "custom-dashboards-volume",
+                                    "configMap": {
+                                        "name": "grafana-custom-dashboards"
+                                    }
+                                }
+                            ],
+                            "restartPolicy": "Never"
+                        }
+                    }
+                }
+            })
+            
+            # Make sure the job runs after the Grafana deployment is complete
+            grafana_dashboard_job.node.add_dependency(prometheus_chart)
+            grafana_dashboard_job.node.add_dependency(custom_dashboards_configmap)
 
         # Install the metrics-server (required for the HPA)
         if (self.node.try_get_context("deploy_metrics_server") == "True"):

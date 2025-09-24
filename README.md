@@ -167,20 +167,41 @@ TODO: Walk through how to do a few basic things in Kibana with searching and das
 
 ## Checking out Grafana and the out-of-the-box metrics dashboards
 
-We have deployed an in-VPC private Network Load Balancer (NLB) to access your Grafana service to visualise the metrics from the Prometheus we've deployed onto the cluster.
+We have deployed an in-VPC private Network Load Balancer (NLB) to access your Grafana service to visualize the metrics from the Prometheus we've deployed onto the cluster.
 
 To access this enter the following command `get service grafana-nlb --namespace=kube-system` to find the address of this under EXTERNAL-IP. Alternatively, you can find the Grafana NLB in the AWS EC2 console and get its address from there.
 
 Once you go to that page the default login/password is admin/prom-operator.
 
-There are some default dashboards that ship with this which you can see by going to Home on top. This will take you to a list view of the available dashboards. Some good ones to check out include:
+### Enhanced Monitoring Capabilities
 
+This deployment includes advanced monitoring features:
+
+1. **Custom Dashboards** - Pre-configured dashboards for comprehensive cluster monitoring
+2. **Resource Optimization** - Enhanced resource configuration for Prometheus and Grafana components
+3. **Advanced Alerting** - Sophisticated PrometheusRules for proactive monitoring
+4. **Enhanced Data Retention** - Extended metrics retention period (15 days)
+5. **CloudWatch Integration** - Additional data source for AWS CloudWatch metrics
+6. **Additional Visualization Plugins** - Enhanced visualization capabilities with additional Grafana plugins
+
+### Available Dashboards
+
+There are both default dashboards that ship with this deployment as well as our custom dashboards:
+
+#### Default Dashboards:
 - Kubernetes / Compute Resources / Cluster
     - This gives you a whole cluster view
 - Kubernetes / Compute Resources / Namespace (Pods)
     - There is a namespace dropdown at the top and it'll show you the graphs including the consumption in that namespace broken down by Pod
 - Kubernetes / Compute Resources / Namespace (Workloads)
     - Similar to the Pod view but instead focuses on Deployment, StatefulSet and DaemonSet views
+
+#### Custom Dashboards:
+- **Kubernetes Cluster Monitoring** - Comprehensive dashboard for monitoring cluster performance, including:
+  - CPU usage by namespace
+  - Memory usage by namespace
+  - Network traffic by pod
+  - Pod status monitoring
 
 Within all of these dashboards you can click on names as links and it'll drill down to show you details relevant to that item.
 
